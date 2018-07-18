@@ -1,3 +1,5 @@
+Lots of progress, but client player doesn't show.
+Watch bounds on 2D arrays
 NEXT: Finish logic in server requests. PlayerManager needs work in every regard.
 Think about
     singleton?

@@ -47,7 +47,7 @@ public class ArenaManager : NetworkBehaviour {
     public GameObject all;
 
     // Use this for initialization
-    void Start(){
+    void Awake(){
 
         setupBoard();
     }
@@ -72,6 +72,7 @@ public class ArenaManager : NetworkBehaviour {
         {
             for (int rowsDone = 0; rowsDone < height; ++rowsDone)
             {
+                Debug.Log("Setting up tile");
                 //create with a parent.
                 GameObject currObject = Instantiate(squarePrefab, cols[colsDone].transform) as GameObject;
                 //position.
@@ -81,13 +82,14 @@ public class ArenaManager : NetworkBehaviour {
                 currObject.name = "c" + colsDone.ToString() + "r" + rowsDone;
 
                 // Init server data
-                SquareData sd = squareData[colsDone, rowsDone];
-                sd.square = currObject;
-                sd.lastCommandID = -1;
+                squareData[colsDone, rowsDone] = new SquareData();
+                SquareData currSD = squareData[colsDone, rowsDone];
+                currSD.square = currObject;
+                currSD.lastCommandID = -1;
 
                 //state
                 currObject.GetComponent<SquareManager>().initOpen();
-                sd.state = SquareManager.OPEN;
+                currSD.state = SquareManager.OPEN;
 
                 //init server data
                 //border colors
@@ -96,7 +98,7 @@ public class ArenaManager : NetworkBehaviour {
 
                     // state
                     currObject.GetComponent<SquareManager>().initWall();
-                    sd.state = SquareManager.WALL;
+                    currSD.state = SquareManager.WALL;
                 }
 
 
@@ -112,7 +114,7 @@ public class ArenaManager : NetworkBehaviour {
     public void AddPlayer(GameObject player){
         // players.Add
         players.Add(player);
-        player.GetComponent<PlayerManager>().myNum = players.Count;
+        player.GetComponent<PlayerManager>().myNum = players.Count - 1;
         catchUp();
          
     }
@@ -130,6 +132,7 @@ public class ArenaManager : NetworkBehaviour {
                 if(sd.state == SquareManager.OPEN){
                     continue;
                 }
+                Debug.Log("Catching up...");
                 if(sd.state >= 0){
                     Color c = players[sd.state].GetComponent<PlayerManager>().myColor;
                     Rpc_ReceiveClaim(sd.state, c, colsDone, rowsDone, sd.lastCommandID);
@@ -146,11 +149,19 @@ public class ArenaManager : NetworkBehaviour {
     // Actually handle logic of requests.
     [Command]
     public void Cmd_RequestClaim(int player, int x, int y){
-        // Need to handle logic here.
-        //check if death
-        // SquareManager sm = squareData[x, y].GetComponent<SquareManager>();
 
-        //check if food
+        SquareManager sm = get_SM(x, y);
+        PlayerManager pm = players[player].GetComponent<PlayerManager>();
+        if(sm.isDeath()){
+            pm.Rpc_Die();
+            return;
+        }
+        if(sm.isFood()){
+            Debug.Log("Growing");
+            pm.Rpc_Grow();            
+        }
+        SendClaim(player, x, y);
+
     }
 
     [Command]
@@ -170,7 +181,8 @@ public class ArenaManager : NetworkBehaviour {
         squareData[x, y].state = player;
         squareData[x, y].lastCommandID = commandsIssued;
 
-        Color c = players[player].GetComponent<PlayerManager>().myColor;
+        PlayerManager pm = players[player].GetComponent<PlayerManager>();
+        Color c = pm.myColor;
         Rpc_ReceiveClaim(player, c, x, y, commandsIssued);
         commandsIssued += 1;
 
@@ -196,21 +208,26 @@ public class ArenaManager : NetworkBehaviour {
     // ==== Client receives RPC ====================
     [ClientRpc]
     public void Rpc_ReceiveClaim(int player, Color c, int x, int y, int commandID){
-        SquareManager squareManager = squareData[x, y].square.GetComponent<SquareManager>();
+        SquareManager squareManager = get_SM(x, y);
         squareManager.makeClaim(player, c, commandID);
 
     }
     [ClientRpc]
     public void Rpc_ReceiveFree(int x, int y, int commandID){
-        SquareManager squareManager = squareData[x, y].square.GetComponent<SquareManager>();
+        SquareManager squareManager = get_SM(x, y);
         squareManager.makeFree(commandID);
     }
     [ClientRpc]
     public void Rpc_ReceiveFood(int x, int y, int commandID){
-        SquareManager squareManager = squareData[x, y].square.GetComponent<SquareManager>();
+        SquareManager squareManager = get_SM(x, y);
         squareManager.makeFood(commandID);
     }
 
+    // ==== HELPERS ===========
+    private SquareManager get_SM(int x, int y){
+       SquareManager sm = squareData[x, y].square.GetComponent<SquareManager>();
+       return sm;
+    }
     // ===== METHODS BELOW ARE OLD!!!!!!!================================
 
     

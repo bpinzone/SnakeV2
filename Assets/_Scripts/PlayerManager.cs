@@ -33,34 +33,41 @@ public class PlayerManager : NetworkBehaviour {
     [SyncVar]
     public string myName;
 
+    public bool alive = true;
+    [ClientRpc]
+    public void Rpc_Die(){
+        alive = false;
+        length = 1;
+    }
+
 
     // ===Dynamic Player Data===
     //Movement
     private char desiredDirection = 'e';
     private char currentDirection = 'e';
     public float cooldown = sec_per_frame;
-    private bool dead = false;
 
     private Vector3 prevTransform;
     private Vector3 currTransform;
 
     //Body
     private Queue<Coord> body = new Queue<Coord>();
-    private int length = 5;
-
-    //Arena Manager
-    private ArenaManager arenaManager = null;
-    private ArenaManager getAM (){
-        if (arenaManager == null){
-            arenaManager = GameObject.Find("ArenaManager").GetComponent<ArenaManager>();
-        }
-        return arenaManager;
+    public int length = 5;
+    [ClientRpc]
+    public void Rpc_Grow(){
+        length += 1;
     }
 
+    //Arena Manager & Registration
+    private bool startedSearch = false;
+    private bool managerFound = false;
+    private bool sentRegistration = false;
+    [SyncVar]
+    public bool registered = false;
+    private ArenaManager arenaManager = null;
 
 	// Use this for initialization
 	void Start () {
-        
 	}
 
     // Called on EVERY NetworkBehavior when it is activated on a client.
@@ -78,40 +85,75 @@ public class PlayerManager : NetworkBehaviour {
 
         //isLocalPlayer is true.
         base.OnStartLocalPlayer();
-        Cmd_Register();
+        // Cmd_Register();
 	}
 
     [Command]
     public void Cmd_Register(){
-        ArenaManager am = getAM();
-        am.AddPlayer(gameObject);
-
-
+        arenaManager.AddPlayer(gameObject);
+        registered = true;
     }
 
-	private void decompose(){
-        
+    IEnumerator FindArenaManager(){
+        GameObject AMObject = null;
+        ArenaManager AM = null;
+        while(AM == null){
+            AMObject = GameObject.Find("ArenaManager");
+            if(AMObject == null){
+                yield return new WaitForSeconds(0.5f);
+            }
+            else{
+                AM = AMObject.GetComponent<ArenaManager>();
+            }
+        }
+        arenaManager = AM;
+        managerFound = true;
     }
-
 	// Update is called once per frame
 	void Update () {
-
-        //Potentially move player object.
         if (!isLocalPlayer){
             return;
         }
-
-        if(dead){
-            decompose();
+        // Start Search For Manager
+        if(!startedSearch){
+            startedSearch = true;
+            StartCoroutine("FindArenaManager");
+            return;
+        }
+        if(managerFound && !sentRegistration){
+            sentRegistration = true;
+            Cmd_Register();
+        }
+        if(!registered){
+            Debug.Log("Not Registered");
+            return;
         }
 
-        GrabInput();
+            Debug.Log("I'm registered and the local player");
+
+        // Handle cool down
         cooldown -= Time.deltaTime;
-        if (cooldown <= 0){
+        bool isCoolFrame = false;
+        if(cooldown <= 0){
             cooldown = sec_per_frame;
-            MovePlayerUnit();
+            isCoolFrame = true;
+
         }
 
+        // Get input
+        GrabInput();
+
+        // If cool, move or decompose
+        // LOOK. UNCOMMENT.
+        if(isCoolFrame){
+            if(alive){
+                MovePlayerUnit();
+            }
+            else{
+                Decompose();
+            }
+        }
+        
         if(MovedLastFrame()){
             MoveSnakeForward();
         }
@@ -182,24 +224,36 @@ public class PlayerManager : NetworkBehaviour {
     }
 
     private void MoveSnakeForward(){
+        //TODO
+        // Problems with authorized length...
 
         // Get position data.
         Vector3 newPos = gameObject.transform.position;
         Coord coordToClaim = new Coord((int)(newPos.x), (int)(newPos.y));
 
-        // Claim
+        // Attempt Claim
         body.Enqueue(coordToClaim);
+        Debug.Log("Requesting claim when my num is:" + myName.ToString());
         arenaManager.Cmd_RequestClaim(myNum, coordToClaim.x, coordToClaim.y);
 
         // Free
-        while (body.Count > length){
+        // If statement allows for growth
+        if(body.Count > length){
             Coord coordToFree = body.Dequeue();
             arenaManager.Cmd_RequestFree(coordToFree.x, coordToFree.y);
+
         }
 
     }
-
-    private void die(){
-        dead = true;
+	private void Decompose(){
+        // When you die, you keep one tile. 
+        // You died, so the last coord you tried to claim is invalid,
+        // so don't try to unclaim it.
+        if(body.Count > 2){
+            Coord coordToFree = body.Dequeue();
+            arenaManager.Cmd_RequestFree(coordToFree.x, coordToFree.y);
+        }
     }
+
+
 }

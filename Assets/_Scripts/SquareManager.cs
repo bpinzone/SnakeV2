@@ -17,9 +17,11 @@ public class SquareManager : MonoBehaviour {
 
     private SpriteRenderer sr;
 
-	// Use this for initialization
-	void Start () {
+    void Awake(){
         sr = gameObject.GetComponent<SpriteRenderer>();
+    }
+	void Start () {
+
 	}
 
     // Informational
