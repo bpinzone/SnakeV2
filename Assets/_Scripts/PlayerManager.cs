@@ -6,7 +6,6 @@ using UnityEngine.Networking;
 public class PlayerManager : NetworkBehaviour {
 
     private class Coord{
-
         public int x;
         public int y;
 
@@ -40,13 +39,11 @@ public class PlayerManager : NetworkBehaviour {
         length = 1;
     }
 
-
     // ===Dynamic Player Data===
     //Movement
     private char desiredDirection = 'e';
     private char currentDirection = 'e';
     public float cooldown = sec_per_frame;
-
     private Vector3 prevTransform;
     private Vector3 currTransform;
 
@@ -58,7 +55,11 @@ public class PlayerManager : NetworkBehaviour {
         length += 1;
     }
 
-    //Arena Manager & Registration
+
+    // todo remove
+    public float countdown = 5.0f;
+
+    //====Arena Manager & Registration===========
     private bool startedSearch = false;
     private bool managerFound = false;
     private bool sentRegistration = false;
@@ -90,11 +91,22 @@ public class PlayerManager : NetworkBehaviour {
 
     [Command]
     public void Cmd_Register(){
+        if(arenaManager == null){
+            // hack for now. component is never found on server becuase of local player filter in update.
+            arenaManager = GameObject.Find("ArenaManager").GetComponent<ArenaManager>();
+        }
         arenaManager.AddPlayer(gameObject);
         registered = true;
+        Cmd_RequestFood();
     }
+    // [Command]
+    // public void Cmd_SpawnAM(){
+    //     GameObject go = Instantiate(AMPrefab, Vector3.zero, Quaternion.identity) as GameObject;
+    //     NetworkServer.SpawnWithClientAuthority(go, connectionToClient);
+    // }
 
     IEnumerator FindArenaManager(){
+        // Cmd_SpawnAM();
         GameObject AMObject = null;
         ArenaManager AM = null;
         while(AM == null){
@@ -104,11 +116,13 @@ public class PlayerManager : NetworkBehaviour {
             }
             else{
                 AM = AMObject.GetComponent<ArenaManager>();
+                // AM.GetComponent<NetworkIdentity>().AssignClientAuthority(this.GetComponent<NetworkIdentity>().connectionToClient);
             }
         }
         arenaManager = AM;
         managerFound = true;
     }
+
 	// Update is called once per frame
 	void Update () {
         if (!isLocalPlayer){
@@ -123,13 +137,21 @@ public class PlayerManager : NetworkBehaviour {
         if(managerFound && !sentRegistration){
             sentRegistration = true;
             Cmd_Register();
+            return;
         }
         if(!registered){
-            Debug.Log("Not Registered");
+            // Debug.Log("Not Registered");
             return;
         }
 
-            Debug.Log("I'm registered and the local player");
+        // Debug.Log("I'm registered and the local player");
+
+
+        if(countdown > 0){
+            countdown -= Time.deltaTime;
+            return;
+        }
+
 
         // Handle cool down
         cooldown -= Time.deltaTime;
@@ -148,21 +170,24 @@ public class PlayerManager : NetworkBehaviour {
         if(isCoolFrame){
             if(alive){
                 MovePlayerUnit();
+                Cmd_MoveSnakeForward();
             }
             else{
-                Decompose();
+                Cmd_Decompose();
             }
         }
         
+        
         if(MovedLastFrame()){
-            MoveSnakeForward();
+            // Cmd_MoveSnakeForward();
         }
 
 	}
 
-
-
 	private bool MovedLastFrame(){
+        if(countdown > 0){
+            return false;
+        }
         currTransform = gameObject.GetComponent<Transform>().position;
         bool result = currTransform != prevTransform;
         prevTransform = currTransform;
@@ -191,8 +216,6 @@ public class PlayerManager : NetworkBehaviour {
             }
         }
 
-
-
     }
     private bool GoingHor(){
         return currentDirection == 'e' || currentDirection == 'w';
@@ -219,11 +242,11 @@ public class PlayerManager : NetworkBehaviour {
 
         currentDirection = desiredDirection;
         gameObject.transform.Translate(differential);
-      
 
     }
 
-    private void MoveSnakeForward(){
+    [Command]
+    private void Cmd_MoveSnakeForward(){
         //TODO
         // Problems with authorized length...
 
@@ -233,7 +256,7 @@ public class PlayerManager : NetworkBehaviour {
 
         // Attempt Claim
         body.Enqueue(coordToClaim);
-        Debug.Log("Requesting claim when my num is:" + myName.ToString());
+        Debug.Log("Requesting claim when my name is:" + myName.ToString());
         arenaManager.Cmd_RequestClaim(myNum, coordToClaim.x, coordToClaim.y);
 
         // Free
@@ -245,7 +268,8 @@ public class PlayerManager : NetworkBehaviour {
         }
 
     }
-	private void Decompose(){
+    [Command]
+	private void Cmd_Decompose(){
         // When you die, you keep one tile. 
         // You died, so the last coord you tried to claim is invalid,
         // so don't try to unclaim it.
@@ -253,6 +277,11 @@ public class PlayerManager : NetworkBehaviour {
             Coord coordToFree = body.Dequeue();
             arenaManager.Cmd_RequestFree(coordToFree.x, coordToFree.y);
         }
+    }
+
+    [Command]
+    private void Cmd_RequestFood(){
+        arenaManager.Cmd_RequestFood();
     }
 
 

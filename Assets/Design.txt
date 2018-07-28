@@ -1,3 +1,6 @@
+Works but player may skip position.
+
+Client attempts to claim initialize block twice. Just need better start control. Learn about spawn timing as well.
 Lots of progress, but client player doesn't show.
 Watch bounds on 2D arrays
 NEXT: Finish logic in server requests. PlayerManager needs work in every regard.

@@ -10,7 +10,7 @@ public class SquareManager : MonoBehaviour {
     public static int OPEN = -2;
     public static int FOOD = -3;
 
-    private int state;
+    private int state = OPEN;
 
     // Make it accept anything first.
     private int lastCommandID = -1;
@@ -79,6 +79,6 @@ public class SquareManager : MonoBehaviour {
         }
         lastCommandID = commandID;
         state = FOOD;
-        sr.color = Color.red;
+        sr.color = Color.yellow;
     }
 }

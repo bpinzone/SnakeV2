@@ -46,6 +46,8 @@ public class ArenaManager : NetworkBehaviour {
     //hierarchy manager.
     public GameObject all;
 
+    public bool finishedSetup = false;
+
     // Use this for initialization
     void Awake(){
 
@@ -68,11 +70,9 @@ public class ArenaManager : NetworkBehaviour {
 
         //set up individuals
         squareData = new SquareData[width, height];
-        for (int colsDone = 0; colsDone < width; ++colsDone)
-        {
-            for (int rowsDone = 0; rowsDone < height; ++rowsDone)
-            {
-                Debug.Log("Setting up tile");
+        for (int colsDone = 0; colsDone < width; ++colsDone){
+            for (int rowsDone = 0; rowsDone < height; ++rowsDone){
+                // Debug.Log("Setting up tile");
                 //create with a parent.
                 GameObject currObject = Instantiate(squarePrefab, cols[colsDone].transform) as GameObject;
                 //position.
@@ -106,7 +106,7 @@ public class ArenaManager : NetworkBehaviour {
 
         }
         //todo SEND OUT FOOD.
-
+        finishedSetup = true;
     }
 
     // ==== SERVER SETUP & CATCH UP METHODS ====
@@ -132,7 +132,7 @@ public class ArenaManager : NetworkBehaviour {
                 if(sd.state == SquareManager.OPEN){
                     continue;
                 }
-                Debug.Log("Catching up...");
+                // Debug.Log("Catching up...");
                 if(sd.state >= 0){
                     Color c = players[sd.state].GetComponent<PlayerManager>().myColor;
                     Rpc_ReceiveClaim(sd.state, c, colsDone, rowsDone, sd.lastCommandID);
@@ -149,16 +149,22 @@ public class ArenaManager : NetworkBehaviour {
     // Actually handle logic of requests.
     [Command]
     public void Cmd_RequestClaim(int player, int x, int y){
+        Debug.Log("Player attempting claim " + x.ToString() + " " + y.ToString() + " for player " + player.ToString());
+
 
         SquareManager sm = get_SM(x, y);
         PlayerManager pm = players[player].GetComponent<PlayerManager>();
         if(sm.isDeath()){
+            Debug.Log("Killing player" + player.ToString());
+            Debug.Log("Death due to coordinate: " + x.ToString() + " " + y.ToString());
+            Debug.Log("Finished setup is: " + finishedSetup.ToString());
             pm.Rpc_Die();
             return;
         }
         if(sm.isFood()){
             Debug.Log("Growing");
             pm.Rpc_Grow();            
+            Cmd_RequestFood();
         }
         SendClaim(player, x, y);
 
@@ -171,13 +177,23 @@ public class ArenaManager : NetworkBehaviour {
 
     [Command]
     public void Cmd_RequestFood(){
-
+        int x = 1;
+        int y = 1;
+        bool valid = false;
+        while(!valid){
+            x = Random.Range(1, width - 1);
+            y = Random.Range(1, height - 1); 
+            SquareManager sm = get_SM(x, y);
+            valid = sm.isOpen();
+        }
+        SendFood(x, y);
     }
 
     // ========== Server actually sends an RPC ==========
     // Not to be used while catching up.
     [Server]
     private void SendClaim(int player, int x, int y){
+        Debug.Log("Claiming " + x.ToString() + " " + y.ToString() + " for player " + player.ToString());
         squareData[x, y].state = player;
         squareData[x, y].lastCommandID = commandsIssued;
 
@@ -228,35 +244,4 @@ public class ArenaManager : NetworkBehaviour {
        SquareManager sm = squareData[x, y].square.GetComponent<SquareManager>();
        return sm;
     }
-    // ===== METHODS BELOW ARE OLD!!!!!!!================================
-
-    
-    // Get the square game object associated with this position on the board. 
-    // public GameObject getSquare(Vector3 position){
-        // return squareData[(int)(position.x), (int)(position.y)];   
-    // }
-
-    [Command]
-    public void Cmd_CookFood(){
-
-        int x = 1;
-        int y = 1;
-
-        bool valid = false;
-        while(!valid){
-            x = Random.Range(1, width - 1);
-            y = Random.Range(1, height - 1);
-            // SquareManager squareManager = squareData[x, y].GetComponent<SquareManager>();
-            // valid = squareManager.isOpen();
-        }
-        Rpc_PlaceFood(x, y);
-
-    }
-
-    [ClientRpc]
-    public void Rpc_PlaceFood(int x, int y){
-        // squares[x, y].GetComponent<SquareManager>().makeFood();
-    }
-
-
 }
