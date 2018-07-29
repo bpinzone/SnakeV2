@@ -170,7 +170,7 @@ public class PlayerManager : NetworkBehaviour {
         if(isCoolFrame){
             if(alive){
                 MovePlayerUnit();
-                Cmd_MoveSnakeForward();
+                MoveSnakeForward();
             }
             else{
                 Cmd_Decompose();
@@ -245,8 +245,7 @@ public class PlayerManager : NetworkBehaviour {
 
     }
 
-    [Command]
-    private void Cmd_MoveSnakeForward(){
+    private void MoveSnakeForward(){
         //TODO
         // Problems with authorized length...
 
@@ -257,16 +256,26 @@ public class PlayerManager : NetworkBehaviour {
         // Attempt Claim
         body.Enqueue(coordToClaim);
         Debug.Log("Requesting claim when my name is:" + myName.ToString());
-        arenaManager.Cmd_RequestClaim(myNum, coordToClaim.x, coordToClaim.y);
+        Cmd_RequestClaim(myNum, coordToClaim.x, coordToClaim.y);
 
         // Free
         // If statement allows for growth
         if(body.Count > length){
             Coord coordToFree = body.Dequeue();
-            arenaManager.Cmd_RequestFree(coordToFree.x, coordToFree.y);
+            Cmd_RequestFree(coordToFree.x, coordToFree.y);
 
         }
 
+    }
+
+    // Wrapped commands. Local player has no authority over arenaManager
+    [Command]
+    private void Cmd_RequestClaim(int myNum, int x, int y){
+        arenaManager.Cmd_RequestClaim(myNum, x, y);
+    }
+    [Command]
+    private void Cmd_RequestFree(int x, int y){
+        arenaManager.Cmd_RequestFree(x, y);
     }
     [Command]
 	private void Cmd_Decompose(){

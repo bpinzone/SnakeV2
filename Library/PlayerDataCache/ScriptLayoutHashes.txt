@@ -1,6 +1,6 @@
-OSXStandalone
+WindowsStandalone
 PlayerPath?
-/Users/BenPinzone/Desktop/Snek.app
+/Users/BenPinzone/Desktop/Snek_windows/Snek_windows.exe
 SceneListBegin?
 Assets/_Scenes/Lobby.unity
 Assets/_Scenes/Main.unity
