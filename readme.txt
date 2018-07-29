@@ -3,7 +3,6 @@ Online Multiplayer Snake
 
 TODO
     Build
-        custom ui
         Lobby re-entrance
     Verify
         spawn position/direction round robbin for many players
