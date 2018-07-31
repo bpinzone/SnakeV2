@@ -11,4 +11,5 @@ TODO
         initial lobby load wait
     Debug
         client does not decompose
+        Food can spawn in snake even with isOpen check.
     

@@ -185,6 +185,7 @@ public class ArenaManager : NetworkBehaviour {
             y = Random.Range(1, height - 1); 
             SquareManager sm = get_SM(x, y);
             valid = sm.isOpen();
+            valid = x != 3;
         }
         SendFood(x, y);
     }
