@@ -181,11 +181,10 @@ public class ArenaManager : NetworkBehaviour {
         int y = 1;
         bool valid = false;
         while(!valid){
-            x = Random.Range(1, width - 1);
-            y = Random.Range(1, height - 1); 
+            x = Random.Range(1, width - 2);
+            y = Random.Range(1, height - 2); 
             SquareManager sm = get_SM(x, y);
-            valid = sm.isOpen();
-            valid = x != 3;
+            valid = sm.isOpen() && x != 3;
         }
         SendFood(x, y);
     }

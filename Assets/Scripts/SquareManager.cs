@@ -79,6 +79,6 @@ public class SquareManager : MonoBehaviour {
         }
         lastCommandID = commandID;
         state = FOOD;
-        sr.color = Color.yellow;
+        sr.color = Color.white;
     }
 }
