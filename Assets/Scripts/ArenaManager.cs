@@ -35,7 +35,7 @@ public class ArenaManager : NetworkBehaviour {
     // num rows
     public int height = 36; 
 
-    //(0, 0) in the world is in the bottom right corner.
+    //(0, 0) in the world is in the bottom left corner.
     //indexed by [col][row]
     //Real objects with sprites.
     public SquareData[,] squareData;
@@ -45,12 +45,10 @@ public class ArenaManager : NetworkBehaviour {
 
     //hierarchy manager.
     public GameObject all;
-
     public bool finishedSetup = false;
 
     // Use this for initialization
     void Awake(){
-
         setupBoard();
     }
 
@@ -100,12 +98,9 @@ public class ArenaManager : NetworkBehaviour {
                     currObject.GetComponent<SquareManager>().initWall();
                     currSD.state = SquareManager.WALL;
                 }
-
-
             }
-
         }
-        //todo SEND OUT FOOD.
+        // Back in setup board base.
         finishedSetup = true;
     }
 
@@ -140,7 +135,6 @@ public class ArenaManager : NetworkBehaviour {
                 else if(sd.state == SquareManager.FOOD){
                     Rpc_ReceiveFood(colsDone, rowsDone, sd.lastCommandID);
                 } 
-
             }
         }        
     }
@@ -150,7 +144,6 @@ public class ArenaManager : NetworkBehaviour {
     [Command]
     public void Cmd_RequestClaim(int player, int x, int y){
         Debug.Log("Player attempting claim " + x.ToString() + " " + y.ToString() + " for player " + player.ToString());
-
 
         SquareManager sm = get_SM(x, y);
         PlayerManager pm = players[player].GetComponent<PlayerManager>();
@@ -201,22 +194,21 @@ public class ArenaManager : NetworkBehaviour {
         Color c = pm.myColor;
         Rpc_ReceiveClaim(player, c, x, y, commandsIssued);
         commandsIssued += 1;
-
     }
+
     [Server]
     private void SendFree(int x, int y){
         squareData[x, y].state = SquareManager.OPEN;
         squareData[x, y].lastCommandID = commandsIssued;
-
         Rpc_ReceiveFree(x, y, commandsIssued);
         commandsIssued += 1;
 
     }
+
     [Server]
     private void SendFood(int x, int y){
         squareData[x, y].state = SquareManager.FOOD;
         squareData[x, y].lastCommandID = commandsIssued;
-        
         Rpc_ReceiveFood(x, y, commandsIssued);
         commandsIssued += 1;
     }
@@ -228,11 +220,13 @@ public class ArenaManager : NetworkBehaviour {
         squareManager.makeClaim(player, c, commandID);
 
     }
+
     [ClientRpc]
     public void Rpc_ReceiveFree(int x, int y, int commandID){
         SquareManager squareManager = get_SM(x, y);
         squareManager.makeFree(commandID);
     }
+
     [ClientRpc]
     public void Rpc_ReceiveFood(int x, int y, int commandID){
         SquareManager squareManager = get_SM(x, y);
@@ -244,4 +238,5 @@ public class ArenaManager : NetworkBehaviour {
        SquareManager sm = squareData[x, y].square.GetComponent<SquareManager>();
        return sm;
     }
+
 }

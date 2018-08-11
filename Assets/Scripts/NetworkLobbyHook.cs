@@ -10,7 +10,6 @@ public class NetworkLobbyHook : LobbyHook {
 	public override void OnLobbyServerSceneLoadedForPlayer(NetworkManager manager, GameObject lobbyPlayer, GameObject gamePlayer){
 		LobbyPlayer lobbyPlayerScript= lobbyPlayer.GetComponent<LobbyPlayer>();
 		PlayerManager playerManagerScript = gamePlayer.GetComponent<PlayerManager>();
-
 		playerManagerScript.myColor = lobbyPlayerScript.playerColor;
 		playerManagerScript.myName = lobbyPlayerScript.playerName;
 	}

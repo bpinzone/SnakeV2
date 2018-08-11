@@ -13,7 +13,6 @@ public class PlayerManager : NetworkBehaviour {
             x = x_;
             y = y_;
         }
-
     }
 
     // ===Settings===
@@ -55,8 +54,7 @@ public class PlayerManager : NetworkBehaviour {
         length += 1;
     }
 
-
-    // todo remove
+    // todo refactor countdown sequence.
     public float countdown = 5.0f;
 
     //====Arena Manager & Registration===========
@@ -74,7 +72,7 @@ public class PlayerManager : NetworkBehaviour {
     // Called on EVERY NetworkBehavior when it is activated on a client.
     // OnStartClient runs just before OnStartLocalPlayer
     // Invoked after clients have connected
-    // Im ASSUMING this happens only on clients???
+    // Im ASSUMING this happens only on clients? Yes.
 	public override void OnStartClient(){
         base.OnStartClient();
 	}
@@ -83,30 +81,22 @@ public class PlayerManager : NetworkBehaviour {
     // Runs only on a single client. (local player)
     // Runs AFTER OnStartClient.
 	public override void OnStartLocalPlayer(){
-
         //isLocalPlayer is true.
         base.OnStartLocalPlayer();
-        // Cmd_Register();
+        // Additional
 	}
 
     [Command]
     public void Cmd_Register(){
         if(arenaManager == null){
-            // hack for now. component is never found on server becuase of local player filter in update.
             arenaManager = GameObject.Find("ArenaManager").GetComponent<ArenaManager>();
         }
         arenaManager.AddPlayer(gameObject);
         registered = true;
         Cmd_RequestFood();
     }
-    // [Command]
-    // public void Cmd_SpawnAM(){
-    //     GameObject go = Instantiate(AMPrefab, Vector3.zero, Quaternion.identity) as GameObject;
-    //     NetworkServer.SpawnWithClientAuthority(go, connectionToClient);
-    // }
 
     IEnumerator FindArenaManager(){
-        // Cmd_SpawnAM();
         GameObject AMObject = null;
         ArenaManager AM = null;
         while(AM == null){
@@ -116,18 +106,17 @@ public class PlayerManager : NetworkBehaviour {
             }
             else{
                 AM = AMObject.GetComponent<ArenaManager>();
-                // AM.GetComponent<NetworkIdentity>().AssignClientAuthority(this.GetComponent<NetworkIdentity>().connectionToClient);
             }
         }
         arenaManager = AM;
         managerFound = true;
     }
 
-	// Update is called once per frame
 	void Update () {
         if (!isLocalPlayer){
             return;
         }
+        // Refactor into registration states.
         // Start Search For Manager
         if(!startedSearch){
             startedSearch = true;
@@ -143,15 +132,10 @@ public class PlayerManager : NetworkBehaviour {
             // Debug.Log("Not Registered");
             return;
         }
-
-        // Debug.Log("I'm registered and the local player");
-
-
         if(countdown > 0){
             countdown -= Time.deltaTime;
             return;
         }
-
 
         // Handle cool down
         cooldown -= Time.deltaTime;
@@ -166,7 +150,6 @@ public class PlayerManager : NetworkBehaviour {
         GrabInput();
 
         // If cool, move or decompose
-        // LOOK. UNCOMMENT.
         if(isCoolFrame){
             if(alive){
                 MovePlayerUnit();
@@ -177,11 +160,6 @@ public class PlayerManager : NetworkBehaviour {
             }
         }
         
-        
-        if(MovedLastFrame()){
-            // Cmd_MoveSnakeForward();
-        }
-
 	}
 
 	private bool MovedLastFrame(){
@@ -215,11 +193,9 @@ public class PlayerManager : NetworkBehaviour {
                 desiredDirection = 'e';
             }
         }
-
     }
     private bool GoingHor(){
         return currentDirection == 'e' || currentDirection == 'w';
-
     }
 	
     private void MovePlayerUnit(){
@@ -239,15 +215,11 @@ public class PlayerManager : NetworkBehaviour {
                 differential.y = 1;
                 break;
         }
-
         currentDirection = desiredDirection;
         gameObject.transform.Translate(differential);
-
     }
 
     private void MoveSnakeForward(){
-        //TODO
-        // Problems with authorized length...
 
         // Get position data.
         Vector3 newPos = gameObject.transform.position;
@@ -259,29 +231,29 @@ public class PlayerManager : NetworkBehaviour {
         Cmd_RequestClaim(myNum, coordToClaim.x, coordToClaim.y);
 
         // Free
-        // If statement allows for growth
+        // Allows for growth.
         if(body.Count > length){
             Coord coordToFree = body.Dequeue();
             Cmd_RequestFree(coordToFree.x, coordToFree.y);
-
         }
-
     }
 
-    // Wrapped commands. Local player has no authority over arenaManager
+    // ======  Wrapped commands. Local player has no authority over arenaManager ========
     [Command]
     private void Cmd_RequestClaim(int myNum, int x, int y){
         arenaManager.Cmd_RequestClaim(myNum, x, y);
     }
+
     [Command]
     private void Cmd_RequestFree(int x, int y){
         arenaManager.Cmd_RequestFree(x, y);
     }
+
     [Command]
 	private void Cmd_Decompose(){
         // When you die, you keep one tile. 
         // You died, so the last coord you tried to claim is invalid,
-        // so don't try to unclaim it.
+        // so don't try to unclaim it. Hence 2.
         if(body.Count > 2){
             Coord coordToFree = body.Dequeue();
             arenaManager.Cmd_RequestFree(coordToFree.x, coordToFree.y);
@@ -292,6 +264,5 @@ public class PlayerManager : NetworkBehaviour {
     private void Cmd_RequestFood(){
         arenaManager.Cmd_RequestFood();
     }
-
 
 }

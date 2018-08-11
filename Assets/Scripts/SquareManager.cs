@@ -21,7 +21,6 @@ public class SquareManager : MonoBehaviour {
         sr = gameObject.GetComponent<SpriteRenderer>();
     }
 	void Start () {
-
 	}
 
     // Informational
@@ -42,7 +41,6 @@ public class SquareManager : MonoBehaviour {
     }
 
     // Init
-
     public void initOpen(){
         state = OPEN;
         sr.color = Color.grey;
